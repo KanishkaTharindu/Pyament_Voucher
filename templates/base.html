@@ -10,32 +10,40 @@
 </head>
 <body style="--brand: {{ company_settings.primary_color }}; --brand-dark: {{ company_settings.secondary_color }}; --brand-accent: {{ company_settings.accent_color }};">
 <nav class="navbar navbar-expand-lg navbar-dark brand-nav">
-  <div class="container">
-    <a class="navbar-brand fw-semibold d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
+  <div class="container-fluid shell-container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
       {% if user.is_authenticated and company_settings.logo %}<img class="brand-logo" src="{% url 'company_logo' %}" alt="{{ company_settings.company_name }} logo">{% endif %}
-      <span>{{ company_settings.company_name }}<span class="brand-sub">{{ company_settings.header_text|default:"Payment Vouchers" }}</span></span>
+      <span class="brand-copy"><span class="brand-company">{{ company_settings.company_name }}</span><span class="brand-sub">{{ company_settings.header_text|default:"Payment Vouchers" }}</span></span>
     </a>
     {% if user.is_authenticated %}
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
     <div class="collapse navbar-collapse" id="mainNav">
-      <div class="navbar-nav me-auto">
-        <a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a>
-        <a class="nav-link" href="{% url 'voucher_list' %}">Vouchers</a>
-        {% if perms.vouchers.approve_voucher or perms.vouchers.approve_any_voucher or user.is_superuser %}<a class="nav-link" href="{% url 'approval_queue' %}">Approvals</a>{% endif %}
-        {% if perms.auth.view_user %}<a class="nav-link" href="{% url 'user_list' %}">Users</a>{% endif %}
-        {% if user.is_superuser %}<a class="nav-link" href="{% url 'recurring_list' %}">Recurring</a>{% else %}{% for group in user.groups.all %}{% if group.name == "Voucher Preparers" or group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'recurring_list' %}">Recurring</a>{% endif %}{% endfor %}{% endif %}
-        {% if user.is_superuser or perms.vouchers.view_finance_reports %}<a class="nav-link" href="{% url 'reports' %}">Reports</a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'reports' %}">Reports</a>{% endif %}{% endfor %}{% endif %}
-        {% if user.is_superuser or perms.vouchers.manage_branches %}<a class="nav-link" href="{% url 'branch_list' %}">Branches</a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'branch_list' %}">Branches</a>{% endif %}{% endfor %}{% endif %}
-        {% if user.is_superuser or perms.vouchers.change_companysettings %}<a class="nav-link" href="{% url 'company_settings' %}">Company settings</a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'company_settings' %}">Company settings</a>{% endif %}{% endfor %}{% endif %}
+      <div class="navbar-nav main-nav me-auto">
+        <a class="nav-link" href="{% url 'dashboard' %}"><span class="nav-icon" aria-hidden="true">⌂</span><span>Dashboard</span></a>
+        <a class="nav-link" href="{% url 'voucher_list' %}"><span class="nav-icon" aria-hidden="true">▤</span><span>Vouchers</span></a>
+        {% if perms.vouchers.approve_voucher or perms.vouchers.approve_any_voucher or user.is_superuser %}<a class="nav-link" href="{% url 'approval_queue' %}"><span class="nav-icon" aria-hidden="true">✓</span><span>Approvals</span></a>{% endif %}
+        {% if perms.auth.view_user %}<a class="nav-link" href="{% url 'user_list' %}"><span class="nav-icon" aria-hidden="true">♙</span><span>Users</span></a>{% endif %}
+        {% if user.is_superuser %}<a class="nav-link" href="{% url 'recurring_list' %}"><span class="nav-icon" aria-hidden="true">↻</span><span>Recurring</span></a>{% else %}{% for group in user.groups.all %}{% if group.name == "Voucher Preparers" or group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'recurring_list' %}"><span class="nav-icon" aria-hidden="true">↻</span><span>Recurring</span></a>{% endif %}{% endfor %}{% endif %}
+        {% if user.is_superuser or perms.vouchers.view_finance_reports %}<a class="nav-link" href="{% url 'reports' %}"><span class="nav-icon" aria-hidden="true">◒</span><span>Reports</span></a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'reports' %}"><span class="nav-icon" aria-hidden="true">◒</span><span>Reports</span></a>{% endif %}{% endfor %}{% endif %}
+        {% if user.is_superuser or perms.vouchers.manage_branches %}<a class="nav-link" href="{% url 'branch_list' %}"><span class="nav-icon" aria-hidden="true">⌖</span><span>Branches</span></a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'branch_list' %}"><span class="nav-icon" aria-hidden="true">⌖</span><span>Branches</span></a>{% endif %}{% endfor %}{% endif %}
+        {% if user.is_superuser or perms.vouchers.change_companysettings %}<a class="nav-link" href="{% url 'company_settings' %}"><span class="nav-icon" aria-hidden="true">⚙</span><span>Company settings</span></a>{% else %}{% for group in user.groups.all %}{% if group.name == "Finance Admins" %}<a class="nav-link" href="{% url 'company_settings' %}"><span class="nav-icon" aria-hidden="true">⚙</span><span>Company settings</span></a>{% endif %}{% endfor %}{% endif %}
       </div>
-      <span class="navbar-text me-3">{{ user.get_full_name|default:user.username }}</span>
-      <a class="btn btn-sm btn-outline-light" href="{% url 'admin:index' %}">Admin</a>
-      <form method="post" action="{% url 'logout' %}" class="ms-2">{% csrf_token %}<button class="btn btn-sm btn-light">Sign out</button></form>
+      <div class="dropdown user-menu">
+        <button class="btn user-menu-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <span class="user-avatar">{{ user.username|first|upper }}</span><span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end">
+          <div class="account-heading"><span class="user-avatar">{{ user.username|first|upper }}</span><div><strong>{{ user.get_full_name|default:user.username }}</strong><small>@{{ user.username }}</small></div></div>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="{% url 'admin:index' %}"><span class="dropdown-icon">⚙</span>Admin</a>
+          <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="dropdown-item" type="submit"><span class="dropdown-icon">↪</span>Sign out</button></form>
+        </div>
+      </div>
     </div>
     {% endif %}
   </div>
 </nav>
-<main class="container py-4">
+<main class="container shell-container py-4 py-lg-5">
   {% if messages %}<div class="messages">{% for message in messages %}<div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endfor %}</div>{% endif %}
   {% block content %}{% endblock %}
 </main>
