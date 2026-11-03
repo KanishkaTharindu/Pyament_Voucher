@@ -132,13 +132,6 @@ class VoucherForm(BootstrapFormMixin, forms.ModelForm):
         cleaned = super().clean()
         if cleaned.get("requires_approval") and not cleaned.get("approver"):
             self.add_error("approver", "Select an authorized approver.")
-        if (
-            cleaned.get("requires_approval")
-            and self.user
-            and cleaned.get("approver")
-            and cleaned["approver"].pk == self.user.pk
-        ):
-            self.add_error("approver", "You cannot approve your own voucher.")
         if self.branches_enabled and not cleaned.get("branch"):
             self.add_error("branch", "Select an active branch.")
         if (
@@ -220,13 +213,6 @@ class RecurringVoucherForm(BootstrapFormMixin, forms.ModelForm):
             and not cleaned.get("branch")
         ):
             self.add_error("branch", "Select an active branch.")
-        if (
-            cleaned.get("requires_approval")
-            and self.user
-            and cleaned.get("approver")
-            and cleaned["approver"].pk == self.user.pk
-        ):
-            self.add_error("approver", "You cannot approve your own voucher.")
         return cleaned
 
 

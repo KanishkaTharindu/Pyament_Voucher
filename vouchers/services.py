@@ -14,6 +14,7 @@ from .models import (
     AuditLog,
     CompanySettings,
     ExpenseCategory,
+    RecurringVoucher,
     UserProfile,
     Voucher,
 )
@@ -198,8 +199,13 @@ def record_audit(voucher, actor, action, previous_status="", notes="", ip_addres
     )
 
 
-def _check_separation_of_duties(voucher, actor):
-    if voucher.prepared_by_id == actor.pk:
+def _check_separation_of_duties(voucher, actor, allow_self_approval=False):
+    if voucher.prepared_by_id == actor.pk and not (
+        allow_self_approval
+        and actor.is_authenticated
+        and actor.is_active
+        and actor.has_perm("vouchers.approve_voucher")
+    ):
         raise WorkflowError("The preparer cannot approve or reject their own voucher.")
     if actor.pk in {voucher.recommended_by_id, voucher.approved_by_id}:
         raise WorkflowError("A different person must complete each approval stage.")
@@ -331,8 +337,6 @@ def transition_voucher(
                     raise WorkflowError(
                         "The selected approver is no longer active or authorized."
                     )
-                if voucher.approver_id == actor.pk:
-                    raise WorkflowError("You cannot approve your own voucher.")
                 voucher.status = Voucher.Status.PREPARED
                 voucher.approval_requested_at = timezone.now()
                 record_action = "submitted"
@@ -392,7 +396,7 @@ def transition_voucher(
                     raise WorkflowError(
                         "Only the selected approver or an authorized administrator can approve this voucher."
                     )
-                _check_separation_of_duties(voucher, actor)
+                _check_separation_of_duties(voucher, actor, allow_self_approval=True)
                 _check_budget(voucher)
                 voucher.approved_by = actor
                 voucher.approved_at = timezone.now()
@@ -449,3 +453,52 @@ def advance_date(current, frequency):
     next_month = date(year + (month == 12), 1 if month == 12 else month + 1, 1)
     last_day = (next_month - timedelta(days=1)).day
     return date(year, month, min(current.day, last_day))
+
+
+def generate_due_recurring():
+    """Create all missed recurring vouchers and advance their schedules."""
+    today = timezone.localdate()
+    generated = 0
+    due_ids = RecurringVoucher.objects.filter(
+        is_active=True, next_run__lte=today
+    ).values_list("pk", flat=True)
+    for recurring_id in due_ids:
+        with transaction.atomic():
+            recurring = (
+                RecurringVoucher.objects.select_for_update()
+                .select_related("category", "prepared_by", "approver", "branch")
+                .get(pk=recurring_id)
+            )
+            while recurring.is_active and recurring.next_run <= today:
+                due_date = recurring.next_run
+                voucher, created = Voucher.objects.get_or_create(
+                    recurring_template=recurring,
+                    recurring_period_date=due_date,
+                    defaults={
+                        "amount": recurring.amount,
+                        "date": due_date,
+                        "cash": recurring.cash,
+                        "method_of_payment": recurring.method_of_payment,
+                        "to": recurring.to,
+                        "account_details": recurring.account_details,
+                        "being": recurring.being,
+                        "payee": recurring.payee,
+                        "category": recurring.category,
+                        "branch": recurring.branch,
+                        "requires_approval": recurring.requires_approval,
+                        "approver": recurring.approver,
+                        "prepared_by": recurring.prepared_by,
+                    },
+                )
+                if created:
+                    AuditLog.objects.create(
+                        voucher=voucher,
+                        actor=recurring.prepared_by,
+                        action="generated",
+                        new_status=voucher.status,
+                        notes=f"Generated from recurring schedule: {recurring.title}",
+                    )
+                    generated += 1
+                recurring.next_run = advance_date(due_date, recurring.frequency)
+            recurring.save(update_fields=["next_run"])
+    return generated

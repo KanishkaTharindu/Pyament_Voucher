@@ -62,13 +62,13 @@ Creating a voucher asks whether approval is required. Approval-required vouchers
 
 ## Recurring vouchers
 
-Create a schedule from **Recurring**. Due schedules produce draft vouchers; they do not bypass the approval process. Run the generator manually:
+Create a schedule from **Recurring**. Due schedules are automatically detected by the Django application and produce draft vouchers; they do not bypass the approval process. Missed periods are caught up safely on the next application request, and each schedule/date pair is generated only once.
 
 ```powershell
 python manage.py generate_recurring
 ```
 
-For automatic generation, schedule that command with Windows Task Scheduler (for example, once each morning), using the project directory as the working directory and `.venv\Scripts\python.exe` as the program. Generation is idempotent for each schedule and due date.
+The management command remains available for operations and deployments that need an explicit catch-up run. Generation is idempotent for each schedule and due date.
 
 ## Email configuration
 
