@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div><p class="eyebrow mb-1">FINANCE OVERVIEW</p><h1 class="h2 mb-0">Voucher dashboard</h1></div>
+  {% if can_manage %}<a class="btn btn-primary" href="{% url 'voucher_create' %}">+ New voucher</a>{% endif %}
+  {% if pending_actions %}<a class="btn btn-outline-primary" href="{% url 'approval_queue' %}">Review {{ pending_actions }} pending</a>{% endif %}
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-label">Visible vouchers</div><div class="metric-value">{{ metrics.total }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-label">Pending approvals</div><div class="metric-value">{{ pending_actions }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-label">Authorized</div><div class="metric-value">{{ metrics.authorized }}</div></div></div>
+  <div class="col-sm-6 col-xl-3"><div class="metric-card"><div class="metric-label">Voucher value this month</div><div class="metric-value money">{{ company_settings.currency_symbol }} {{ metrics.month_total|floatformat:2 }}</div></div></div>
+</div>
+<div class="row g-4">
+  <div class="col-lg-8"><section class="card"><div class="card-header d-flex justify-content-between"><h2 class="h5 mb-0">Recent vouchers</h2><a href="{% url 'voucher_list' %}">View all</a></div>
+    <div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Reference</th><th>Date</th><th>Payee</th><th>Amount</th><th>Status</th></tr></thead><tbody>
+      {% for voucher in recent_vouchers %}<tr><td><a href="{% url 'voucher_detail' voucher.pk %}" class="fw-semibold">{{ voucher.ref_no }}</a></td><td>{{ voucher.date|date:"d M Y" }}</td><td>{{ voucher.payee }}</td><td>{{ company_settings.currency_symbol }} {{ voucher.amount|floatformat:2 }}</td><td><span class="status status-{{ voucher.status }}">{{ voucher.get_status_display }}</span></td></tr>
+      {% empty %}<tr><td colspan="5" class="text-muted text-center py-4">No vouchers are visible yet.</td></tr>{% endfor %}
+    </tbody></table></div></section></div>
+  <div class="col-lg-4"><section class="card h-100"><div class="card-header"><h2 class="h5 mb-0">Authorized spend by category</h2></div><div class="card-body">
+    {% for row in category_spend %}<div class="d-flex justify-content-between py-2 border-bottom"><span>{{ row.category__name }}</span><strong>{{ company_settings.currency_symbol }} {{ row.total|floatformat:2 }}</strong></div>{% empty %}<p class="text-muted mb-0">No authorized spending this month.</p>{% endfor %}
+  </div></section></div>
+</div>
+{% endblock %}

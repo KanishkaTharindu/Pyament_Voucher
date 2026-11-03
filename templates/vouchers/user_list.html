@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}User management{% endblock %}
+{% block content %}
+<header class="management-heading mb-4">
+  <div><p class="eyebrow mb-1">ADMINISTRATION</p><h1 class="h2 mb-1">User management</h1><p class="text-muted mb-0">Manage sign-in accounts, roles, branches, and permissions.</p></div>
+  <div class="d-flex flex-wrap gap-2">{% if can_manage_groups %}<a class="btn btn-outline-secondary" href="{% url 'group_list' %}">Manage groups</a>{% endif %}{% if can_add_user %}<a class="btn btn-primary" href="{% url 'user_create' %}">+ Add user</a>{% endif %}</div>
+</header>
+<form method="get" class="card filter-card mb-4"><div class="card-body d-flex flex-wrap align-items-end gap-3"><div class="flex-grow-1"><label class="form-label" for="user-search">Search users</label><input class="form-control" id="user-search" name="q" value="{{ query }}" placeholder="Name, username, email, or branch"></div><button class="btn btn-primary">Search</button><a class="btn btn-outline-secondary" href="{% url 'user_list' %}">Clear</a></div></form>
+<section class="card management-card">
+  <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h5 mb-0">Accounts</h2><span class="text-muted small">Showing up to 250 users</span></div>
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>User</th><th>Email</th><th>Primary role</th><th>Branch</th><th>Groups</th><th>Status</th>{% if request.user.is_superuser or perms.auth.change_user %}<th></th>{% endif %}</tr></thead>
+    <tbody>{% for account in users %}
+    <tr>
+      <td><strong>{{ account.get_full_name|default:account.username }}</strong><div class="small text-muted">@{{ account.username }}</div></td>
+      <td>{{ account.email|default:"—" }}</td>
+      <td>{% if account.voucher_profile.role_group %}<span class="role-badge">{{ account.voucher_profile.role_group.name }}</span>{% elif account.workflow_roles %}{% for role in account.workflow_roles %}<span class="role-badge">{{ role.name }}</span>{% endfor %}{% else %}<span class="text-muted">No role</span>{% endif %}</td>
+      <td>{{ account.voucher_profile.branch.name|default:"Unassigned" }}</td>
+      <td>{{ account.groups.count }}</td>
+      <td>{% if account.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td>
+      {% if request.user.is_superuser or perms.auth.change_user %}<td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'user_update' account.pk %}">Edit</a></td>{% endif %}
+    </tr>
+    {% empty %}<tr><td colspan="7" class="text-center text-muted py-5">No users match your search.</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endblock %}

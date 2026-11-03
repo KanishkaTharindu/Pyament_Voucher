@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Approval queue{% endblock %}
+{% block content %}
+<header class="management-heading mb-4">
+  <div><p class="eyebrow mb-1">VOUCHER WORKFLOW</p><h1 class="h2 mb-1">Approval queue</h1><p class="text-muted mb-0">Vouchers assigned to you and legacy workflow items you are authorized to process.</p></div>
+  <span class="queue-count">{{ vouchers|length }} pending</span>
+</header>
+<section class="card management-card">
+  <div class="table-responsive"><table class="table table-hover align-middle mb-0">
+    <thead><tr><th>Reference</th><th>Submitted</th><th>Payee</th><th>Branch</th><th class="text-end">Amount</th><th></th></tr></thead>
+    <tbody>
+      {% for voucher in vouchers %}
+      <tr>
+        <td><a class="fw-semibold" href="{% url 'voucher_detail' voucher.pk %}">{{ voucher.ref_no }}</a><div class="small text-muted">{{ voucher.get_status_display }}</div></td>
+        <td>{% if voucher.approval_requested_at %}{{ voucher.approval_requested_at|date:"d M Y, H:i" }}{% else %}{{ voucher.created_at|date:"d M Y, H:i" }}{% endif %}</td>
+        <td>{{ voucher.payee }}<div class="small text-muted">Prepared by {{ voucher.prepared_by.get_full_name|default:voucher.prepared_by.username }}</div></td>
+        <td>{{ voucher.branch|default:"Unassigned" }}</td>
+        <td class="text-end fw-semibold">{{ company_settings.currency_symbol }} {{ voucher.amount|floatformat:2 }}</td>
+        <td class="text-end"><a class="btn btn-sm btn-primary" href="{% url 'voucher_detail' voucher.pk %}">Review</a></td>
+      </tr>
+      {% empty %}<tr><td colspan="6" class="text-center text-muted py-5"><strong class="d-block text-body mb-1">You're all caught up</strong>No vouchers are currently awaiting your approval.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
+{% endblock %}

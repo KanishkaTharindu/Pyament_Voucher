@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<header class="management-heading mb-4"><div><a class="text-decoration-none" href="{% url 'group_list' %}">← Groups & permissions</a><p class="eyebrow mt-3 mb-1">ACCESS CONTROL</p><h1 class="h2 mb-1">{{ title }}</h1><p class="text-muted mb-0">Choose exactly which Django model permissions members receive.</p></div></header>
+<form method="post" class="management-form">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <section class="card management-card mb-4"><div class="card-body p-4"><label class="form-label" for="{{ form.name.id_for_label }}">Group name</label>{{ form.name }}{% for error in form.name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div></section>
+  <section class="card management-card">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"><div><p class="eyebrow mb-1">DJANGO MODEL ACCESS</p><h2 class="h5 mb-0">Group permissions</h2><span class="form-text">Permissions are grouped by application and model.</span></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-outline-secondary" data-select-all="group-permissions">Select all</button><button type="button" class="btn btn-sm btn-outline-secondary" data-clear-all="group-permissions">Clear</button></div></div>
+    <div class="card-body p-4"><label class="visually-hidden" for="permission-search">Search permissions</label><input id="permission-search" class="form-control mb-3" placeholder="Search permissions..."><div class="permission-checklist permission-checklist-tall" id="group-permissions">{{ form.permissions }}</div>{% for error in form.permissions.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+  </section>
+  <div class="management-actions mt-4"><a class="btn btn-outline-secondary" href="{% url 'group_list' %}">Cancel</a><button class="btn btn-primary px-4">Save group</button></div>
+</form>
+<script src="{% static 'js/user-management.js' %}" defer></script>
+{% endblock %}

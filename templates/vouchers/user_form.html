@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<header class="management-heading mb-4"><div><a class="text-decoration-none" href="{% url 'user_list' %}">← User management</a><p class="eyebrow mt-3 mb-1">ACCOUNT ADMINISTRATION</p><h1 class="h2 mb-1">{{ title }}</h1><p class="text-muted mb-0">Set the account's role, branch, group memberships, and individual permissions.</p></div></header>
+<form method="post" class="management-form">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-4">
+    <div class="col-xl-8">
+      <section class="card management-card mb-4">
+        <div class="card-header"><p class="eyebrow mb-1">ACCOUNT DETAILS</p><h2 class="h5 mb-0">User information</h2></div>
+        <div class="card-body p-4"><div class="row g-3">
+          {% for field in form %}
+            {% if field.name == "username" or field.name == "first_name" or field.name == "last_name" or field.name == "email" or field.name == "password1" or field.name == "password2" or field.name == "is_active" %}
+            <div class="{% if field.name == 'is_active' %}col-12{% else %}col-md-6{% endif %}">
+              {% if field.name == "is_active" %}<div class="form-check mt-2">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}</label>{{ field }}{% endif %}
+              {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+              {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+            </div>
+            {% endif %}
+          {% endfor %}
+        </div></div>
+      </section>
+
+      <section class="card management-card mb-4">
+        <div class="card-header"><p class="eyebrow mb-1">ACCESS ASSIGNMENT</p><h2 class="h5 mb-0">Role and branch</h2></div>
+        <div class="card-body p-4"><div class="row g-3">
+          <div class="col-md-6"><label class="form-label" for="{{ form.role.id_for_label }}">Primary role</label>{{ form.role }}<div class="form-text">Maps to a workflow role group.</div>{% for error in form.role.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="col-md-6"><label class="form-label" for="{{ form.branch.id_for_label }}">Branch</label>{{ form.branch }}<div class="form-text">Assigned branches limit voucher visibility unless the user has cross-branch access. No branch preserves organization-wide visibility.</div>{% for error in form.branch.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        </div></div>
+      </section>
+
+      <section class="card management-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center"><div><p class="eyebrow mb-1">GROUP MEMBERSHIP</p><h2 class="h5 mb-0">Additional groups</h2></div><button type="button" class="btn btn-sm btn-outline-secondary" data-select-all="additional-groups">Select all</button></div>
+        <div class="card-body p-4"><div class="permission-checklist" id="additional-groups">{{ form.groups }}</div>{% for error in form.groups.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}<p class="form-text mt-3 mb-0">Groups add their assigned permissions and workflow access to this account.</p></div>
+      </section>
+
+      <section class="card management-card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"><div><p class="eyebrow mb-1">INDIVIDUAL ACCESS</p><h2 class="h5 mb-0">Direct permissions</h2></div><div class="d-flex gap-2"><button type="button" class="btn btn-sm btn-outline-secondary" data-select-all="direct-permissions">Select all</button><button type="button" class="btn btn-sm btn-outline-secondary" data-clear-all="direct-permissions">Clear</button></div></div>
+        <div class="card-body p-4"><label class="visually-hidden" for="permission-search">Search permissions</label><input id="permission-search" class="form-control mb-3" placeholder="Search permissions..."><div class="permission-checklist permission-checklist-tall" id="direct-permissions">{{ form.user_permissions }}</div>{% for error in form.user_permissions.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}<p class="form-text mt-3 mb-0">Direct permissions apply only to this user. To assign permissions to a complete group, use Manage groups.</p></div>
+      </section>
+    </div>
+    <div class="col-xl-4">
+      <aside class="card management-card access-summary">
+        <div class="card-header"><p class="eyebrow mb-1">ACCESS SUMMARY</p><h2 class="h5 mb-0">How access works</h2></div>
+        <div class="card-body"><div class="access-summary-step"><span>01</span><div><strong>Choose a primary role</strong><p>Preparer, recommender, approver, authorizer, or finance admin.</p></div></div><div class="access-summary-step"><span>02</span><div><strong>Assign a branch</strong><p>Branch users only see vouchers assigned to their location.</p></div></div><div class="access-summary-step"><span>03</span><div><strong>Fine-tune permissions</strong><p>Combine additional groups with account-specific Django permissions.</p></div></div></div>
+      </aside>
+    </div>
+  </div>
+  <div class="management-actions mt-4"><a class="btn btn-outline-secondary" href="{% url 'user_list' %}">Cancel</a><button class="btn btn-primary px-4">{% if is_creating %}Create user{% else %}Save user{% endif %}</button></div>
+</form>
+<script src="{% static 'js/user-management.js' %}" defer></script>
+{% endblock %}

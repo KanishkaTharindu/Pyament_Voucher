@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Print {{ voucher.ref_no }}{% endblock %}
+{% block content %}
+<div class="print-toolbar d-flex justify-content-between align-items-center mb-3">
+  <a class="btn btn-outline-secondary" href="{% url 'voucher_detail' voucher.pk %}">← Back to voucher</a>
+  <button class="btn btn-primary" type="button" onclick="window.print()">Print voucher</button>
+</div>
+<article class="voucher-paper voucher-paper-{{ company_settings.print_layout }}">
+  <header class="voucher-paper-header">
+    {% if company_settings.logo %}<img class="voucher-paper-logo" src="{% url 'company_logo' %}" alt="{{ company_settings.company_name }} logo">{% endif %}
+    <div class="voucher-paper-company">
+      <h1>{{ company_settings.company_name }}</h1>
+      {% if company_settings.header_text %}<p>{{ company_settings.header_text }}</p>{% endif %}
+      <h2>PAYMENT VOUCHER</h2>
+    </div>
+    <div class="voucher-paper-status"><span>REFERENCE</span><strong>{{ voucher.ref_no }}</strong><span class="status status-{{ voucher.status }}">{{ voucher.get_status_display }}</span></div>
+  </header>
+
+  <table class="voucher-paper-table">
+    <tbody>
+      <tr><th>Amount</th><td class="voucher-paper-amount">{{ company_settings.currency_symbol }} {{ voucher.amount|floatformat:2 }}</td><th>Date</th><td>{{ voucher.date|date:"d F Y" }}</td></tr>
+      <tr><th>Cash</th><td>{% if voucher.cash %}Yes{% else %}No{% endif %}</td><th>Method of Payment</th><td>{{ voucher.get_method_of_payment_display }}</td></tr>
+      <tr><th>To</th><td>{{ voucher.to }}</td><th>Account Details</th><td>{{ voucher.account_details|default:"—" }}</td></tr>
+      <tr><th>Cheque number</th><td>{{ voucher.cheque_number|default:"—" }}</td><th>Receipt Attached</th><td>{% if voucher.receipt_attached %}Yes{% else %}No{% endif %}</td></tr>
+      <tr><th>Being</th><td colspan="3">{{ voucher.being }}</td></tr>
+      <tr><th>Category</th><td colspan="3">{{ voucher.category.name }}</td></tr>
+      <tr><th>Branch</th><td colspan="3">{{ voucher.branch|default:"Unassigned" }}</td></tr>
+      <tr><th>Approval required</th><td>{% if voucher.requires_approval %}Yes{% else %}No{% endif %}</td><th>Assigned approver</th><td>{% if voucher.approver %}{{ voucher.approver.get_full_name|default:voucher.approver.get_username }}{% else %}—{% endif %}</td></tr>
+      {% if voucher.approval_requested_at %}<tr><th>Approval submitted</th><td colspan="3">{{ voucher.approval_requested_at|date:"d F Y, H:i" }}</td></tr>{% endif %}
+      <tr><th>Payee</th><td colspan="3">{{ voucher.payee }}</td></tr>
+    </tbody>
+  </table>
+
+  <section class="voucher-approval-grid" aria-label="Voucher approvals and signatures">
+    <div class="voucher-signature-cell"><span>Prepared By</span><strong>{{ voucher.prepared_by.get_full_name|default:voucher.prepared_by.username }}</strong><i></i></div>
+    {% if voucher.recommended_by %}<div class="voucher-signature-cell"><span>Recommended By</span><strong>{{ voucher.recommended_by.get_full_name|default:" " }}</strong><i></i></div>{% endif %}
+    <div class="voucher-signature-cell"><span>Approved By</span><strong>{{ voucher.approved_by.get_full_name|default:" " }}</strong><i></i></div>
+    <div class="voucher-signature-cell"><span>Authorized By</span><strong>{{ voucher.authorized_by.get_full_name|default:" " }}</strong><i></i></div>
+    <div class="voucher-signature-cell"><span>Payee Signature</span>{% if voucher.signature %}<img src="{% url 'voucher_attachment' voucher.pk 'signature' %}" alt="Payee signature">{% else %}<i></i>{% endif %}</div>
+    <div class="voucher-signature-cell"><span>Authorized Signature</span>{% if voucher.authorized_signature %}<img src="{% url 'voucher_attachment' voucher.pk 'authorized-signature' %}" alt="Authorized signature">{% else %}<i></i>{% endif %}</div>
+  </section>
+
+  {% if voucher.receipt_file %}<p class="voucher-receipt-note">Receipt: {{ voucher.receipt_file.name|cut:"vouchers/receipts/" }}</p>{% endif %}
+  {% if company_settings.footer_text %}<footer class="voucher-paper-footer">{{ company_settings.footer_text }}</footer>{% endif %}
+</article>
+{% endblock %}

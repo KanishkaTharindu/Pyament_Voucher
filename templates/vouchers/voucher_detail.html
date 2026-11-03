@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ voucher.ref_no }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"><div><a href="{% url 'voucher_list' %}" class="text-decoration-none">← All vouchers</a><p class="eyebrow mt-3 mb-1">PAYMENT VOUCHER</p><h1 class="h2 mb-2">{{ voucher.ref_no }}</h1><span class="status status-{{ voucher.status }}">{{ voucher.get_status_display }}</span></div><div class="d-flex gap-2 flex-wrap">{% if can_print %}<a class="btn btn-outline-primary" href="{% url 'voucher_print' voucher.pk %}" target="_blank" rel="noopener">Print voucher</a><a class="btn btn-outline-primary" href="{% url 'voucher_pdf' voucher.pk %}">Download PDF</a>{% else %}<button class="btn btn-outline-secondary" type="button" disabled title="Printing is enabled after approval">Print unavailable until approved</button>{% endif %}{% if can_edit %}<a class="btn btn-outline-secondary" href="{% url 'voucher_update' voucher.pk %}">Edit draft</a>{% endif %}</div></div>
+<div class="row g-4"><div class="col-lg-8"><section class="card"><div class="card-header"><h2 class="h5 mb-0">Voucher details</h2></div><div class="card-body"><dl class="row detail-list">
+  <dt class="col-sm-4">Amount</dt><dd class="col-sm-8 fw-bold">{{ company_settings.currency_symbol }} {{ voucher.amount|floatformat:2 }}</dd>
+  <dt class="col-sm-4">Date</dt><dd class="col-sm-8">{{ voucher.date|date:"d F Y" }}</dd>
+  <dt class="col-sm-4">Payment method</dt><dd class="col-sm-8">{{ voucher.get_method_of_payment_display }}{% if voucher.cash %} · Cash{% endif %}</dd>
+  <dt class="col-sm-4">To</dt><dd class="col-sm-8">{{ voucher.to }}</dd>
+  <dt class="col-sm-4">Account details</dt><dd class="col-sm-8">{{ voucher.account_details|default:"—" }}</dd>
+  <dt class="col-sm-4">Cheque number</dt><dd class="col-sm-8">{{ voucher.cheque_number|default:"—" }}</dd>
+  <dt class="col-sm-4">Expense category</dt><dd class="col-sm-8">{{ voucher.category }}</dd>
+  <dt class="col-sm-4">Branch</dt><dd class="col-sm-8">{{ voucher.branch|default:"Unassigned" }}</dd>
+  <dt class="col-sm-4">Approval required</dt><dd class="col-sm-8">{% if voucher.requires_approval %}Yes{% else %}No{% endif %}</dd>
+  {% if voucher.approver %}<dt class="col-sm-4">Assigned approver</dt><dd class="col-sm-8">{{ voucher.approver.get_full_name|default:voucher.approver.username }}{% if voucher.approval_requested_at %}<span class="text-muted"> · submitted {{ voucher.approval_requested_at|date:"d M Y, H:i" }}</span>{% endif %}</dd>{% endif %}
+  {% if voucher.approved_at %}<dt class="col-sm-4">Approved at</dt><dd class="col-sm-8">{{ voucher.approved_at|date:"d M Y, H:i" }}</dd>{% endif %}
+  {% if voucher.rejected_at %}<dt class="col-sm-4">Rejected at</dt><dd class="col-sm-8">{{ voucher.rejected_at|date:"d M Y, H:i" }}</dd>{% endif %}
+  <dt class="col-sm-4">Being</dt><dd class="col-sm-8">{{ voucher.being }}</dd>
+  <dt class="col-sm-4">Payee</dt><dd class="col-sm-8">{{ voucher.payee }}</dd>
+  <dt class="col-sm-4">Receipt attached</dt><dd class="col-sm-8">{% if voucher.receipt_attached %}Yes{% else %}No{% endif %}{% if voucher.receipt_file %} · <a href="{% url 'voucher_attachment' voucher.pk 'receipt' %}">Download receipt</a>{% endif %}</dd>
+  <dt class="col-sm-4">Payee signature</dt><dd class="col-sm-8">{% if voucher.signature %}<a href="{% url 'voucher_attachment' voucher.pk 'signature' %}">Download uploaded signature</a>{% else %}—{% endif %}</dd>
+</dl></div></section>
+{% if can_act %}<section class="card mt-4"><div class="card-header"><h2 class="h5 mb-0">Workflow action</h2></div><div class="card-body d-flex flex-wrap gap-2"><form method="post" enctype="multipart/form-data" action="{% url 'voucher_action' voucher.pk 'approve' %}">{% csrf_token %}{% if voucher.status == "approved" %}<div class="mb-2"><label class="form-label" for="{{ authorization_form.authorized_signature.id_for_label }}">{{ authorization_form.authorized_signature.label }}</label>{{ authorization_form.authorized_signature }}<div class="form-text">{{ authorization_form.authorized_signature.help_text }}</div></div>{% endif %}<button class="btn btn-success">Approve / continue</button></form>
+<form method="post" action="{% url 'voucher_action' voucher.pk 'reject' %}" class="d-flex flex-wrap gap-2 align-items-start">{% csrf_token %}<div>{{ rejection_form.reason }}{% for error in rejection_form.reason.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div><button class="btn btn-outline-danger">Reject</button></form></div></section>{% endif %}
+{% if voucher.status == "draft" and can_edit %}<form method="post" action="{% url 'voucher_action' voucher.pk 'submit' %}" class="mt-3">{% csrf_token %}<button class="btn btn-primary">Submit for approval</button></form>{% endif %}
+</div><div class="col-lg-4"><section class="card mb-4"><div class="card-header"><h2 class="h5 mb-0">Approvals</h2></div><div class="card-body">
+  <div class="approval-step"><span>Prepared by</span><strong>{{ voucher.prepared_by.get_full_name|default:voucher.prepared_by.username }}</strong></div>
+  {% if voucher.requires_approval %}<div class="approval-step"><span>Assigned approver</span><strong>{% if voucher.approver %}{{ voucher.approver.get_full_name|default:voucher.approver.get_username }}{% else %}Pending{% endif %}</strong>{% if voucher.approval_requested_at %}<small class="text-muted">Submitted {{ voucher.approval_requested_at|date:"d M Y, H:i" }}</small>{% endif %}</div>{% endif %}
+  {% if voucher.recommended_by %}<div class="approval-step"><span>Recommended by</span><strong>{{ voucher.recommended_by.get_full_name }}</strong></div>{% endif %}
+  <div class="approval-step"><span>Approved by</span><strong>{{ voucher.approved_by.get_full_name|default:"Pending" }}</strong>{% if voucher.approved_at %}<small class="text-muted">{{ voucher.approved_at|date:"d M Y, H:i" }}</small>{% endif %}</div>
+  <div class="approval-step"><span>Authorized by</span><strong>{{ voucher.authorized_by.get_full_name|default:"Pending" }}</strong></div>
+  {% if voucher.authorized_signature %}<a href="{% url 'voucher_attachment' voucher.pk 'authorized-signature' %}">Authorized signature file</a>{% endif %}
+  {% if voucher.rejection_reason %}<div class="alert alert-danger mt-3 mb-0"><strong>Rejected:</strong> {{ voucher.rejection_reason }}</div>{% endif %}
+</div></section>
+<section class="card"><div class="card-header"><h2 class="h5 mb-0">Audit history</h2></div><div class="list-group list-group-flush">{% for entry in voucher.audit_logs.all %}<div class="list-group-item"><div class="d-flex justify-content-between"><strong>{{ entry.get_action_display|default:entry.action|title }}</strong><small class="text-muted">{{ entry.created_at|date:"d M Y, H:i" }}</small></div><div class="small text-muted">{{ entry.actor.get_full_name|default:entry.actor.username }}{% if entry.previous_status %} · {{ entry.previous_status }} → {{ entry.new_status }}{% endif %}</div>{% if entry.notes %}<div class="small mt-1">{{ entry.notes }}</div>{% endif %}</div>{% empty %}<div class="p-3 text-muted">No audit entries.</div>{% endfor %}</div></section></div></div>
+{% endblock %}

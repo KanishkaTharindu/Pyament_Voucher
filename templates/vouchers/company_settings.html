@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Company settings{% endblock %}
+{% block content %}
+<header class="settings-heading mb-4">
+  <div>
+    <p class="eyebrow mb-1">ADMINISTRATION</p>
+    <h1 class="h2 mb-1">Company branding</h1>
+    <p class="text-muted mb-0">Customize the application header and the voucher print design.</p>
+  </div>
+</header>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-4">
+    <div class="col-xl-8">
+      <section class="card settings-card mb-4">
+        <div class="card-header"><p class="eyebrow mb-1">COMPANY IDENTITY</p><h2 class="h5 mb-0">Name, currency, logo and text</h2></div>
+        <div class="card-body p-4">
+          <div class="mb-3"><label class="form-label" for="{{ form.company_name.id_for_label }}">Company name</label>{{ form.company_name }}{% for error in form.company_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="mb-3"><label class="form-label" for="{{ form.currency_code.id_for_label }}">Currency</label>{{ form.currency_code }}<div class="form-text">Used on dashboards, reports, voucher details, recurring schedules, and printed vouchers.</div>{% for error in form.currency_code.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div class="mb-3"><label class="form-label" for="{{ form.logo.id_for_label }}">Company logo</label>{{ form.logo }}<div class="form-text">{{ form.logo.help_text }}</div>{% for error in form.logo.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}{% if branding.logo %}<div class="current-logo mt-3"><img src="{% url 'company_logo' %}" alt="Current company logo"><span>Current logo</span></div>{% endif %}</div>
+          <div class="mb-3"><label class="form-label" for="{{ form.header_text.id_for_label }}">Header text</label>{{ form.header_text }}<div class="form-text">Optional subtitle or registration details shown beneath your company name.</div>{% for error in form.header_text.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+          <div><label class="form-label" for="{{ form.footer_text.id_for_label }}">Footer text</label>{{ form.footer_text }}<div class="form-text">Shown in the application footer and at the bottom of printed vouchers.</div>{% for error in form.footer_text.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+        </div>
+      </section>
+
+      <section class="card settings-card">
+        <div class="card-header"><p class="eyebrow mb-1">VOUCHER FORMAT</p><h2 class="h5 mb-0">Print layout</h2></div>
+        <div class="card-body p-4">
+          <label class="form-label" for="{{ form.print_layout.id_for_label }}">Page layout</label>{{ form.print_layout }}
+          <p class="form-text mb-0">Choose a landscape paper form, a portrait voucher, or a more compact printout. This setting updates both browser printing and PDF downloads.</p>
+          {% for error in form.print_layout.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+      </section>
+      <section class="card settings-card mt-4">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2"><div><p class="eyebrow mb-1">BRANCH OPERATIONS</p><h2 class="h5 mb-0">Branch configuration</h2></div>{% if can_manage_branches %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'branch_list' %}">Manage branches</a>{% endif %}</div>
+        <div class="card-body p-4"><div class="form-check">{{ form.branches_enabled }}<label class="form-check-label fw-semibold" for="{{ form.branches_enabled.id_for_label }}">Enable branch functionality</label></div><p class="form-text mt-2 mb-0">When enabled, vouchers require an active branch, users are scoped to assigned branches, and voucher references use branch codes. Disabling hides branch selection without deleting branch records or historical assignments.</p>{% for error in form.branches_enabled.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}</div>
+      </section>
+    </div>
+
+    <div class="col-xl-4">
+      <section class="card settings-card theme-card">
+        <div class="card-header"><p class="eyebrow mb-1">COLOR SYSTEM</p><h2 class="h5 mb-0">Choose your theme</h2></div>
+        <div class="card-body p-4">
+          <label class="form-label" for="{{ form.theme_name.id_for_label }}">Theme preset</label>{{ form.theme_name }}
+          <div class="form-text mb-3">{{ form.theme_name.help_text }}</div>
+          {% for field in color_fields %}
+          <div class="color-setting">
+            <label class="form-label mb-1" for="{{ field.id_for_label }}">{{ field.label }}</label>
+            <div class="d-flex align-items-center gap-2">{{ field }}<span class="color-value" data-color-value="{{ field.name }}">{{ field.value }}</span></div>
+            {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+          </div>
+          {% endfor %}
+          {% for error in form.theme_name.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+        </div>
+      </section>
+      <section class="brand-preview mt-4" id="brand-preview">
+        <span class="preview-caption">LIVE PREVIEW</span>
+        <div class="preview-header"><span class="preview-logo">H</span><div><strong id="preview-company">{{ branding.company_name }}</strong><small id="preview-subtitle">{{ branding.header_text|default:"Payment voucher" }}</small></div></div>
+        <div class="preview-document"><span>PAYMENT VOUCHER</span><strong>HCP-2026-00001</strong><span class="preview-currency" id="preview-currency">{{ branding.currency_symbol }} 1,250.00</span><i></i></div>
+        <button type="button" class="btn btn-primary btn-sm mt-3 pe-none">Primary button</button>
+      </section>
+    </div>
+  </div>
+  <div class="settings-actions mt-4"><a class="btn btn-outline-secondary" href="{% url 'dashboard' %}">Cancel</a><button class="btn btn-primary px-4">Save company settings</button></div>
+</form>
+<script src="{% static 'js/company-settings.js' %}" defer></script>
+{% endblock %}

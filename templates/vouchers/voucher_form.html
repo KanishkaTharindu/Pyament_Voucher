@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="mb-4"><a href="{% if voucher %}{% url 'voucher_detail' voucher.pk %}{% else %}{% url 'voucher_list' %}{% endif %}" class="text-decoration-none">← Back</a><p class="eyebrow mt-3 mb-1">PAYMENT VOUCHER</p><h1 class="h2">{{ title }}</h1><p class="text-muted">Fields marked with * are required. Uploads are limited to 10 MB per file.</p></div>
+<form method="post" enctype="multipart/form-data" class="card" id="voucher-form" data-approver-url="{% url 'approver_options' %}"><div class="card-body p-lg-4">{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="row g-3">{% for field in form %}
+    <div class="{% if field.name == 'approver' %}col-md-6{% elif field.name == 'being' or field.name == 'account_details' or field.name == 'receipt_file' or field.name == 'signature' %}col-md-6{% elif field.field.widget.input_type == 'checkbox' %}col-md-4{% else %}col-md-4{% endif %}" {% if field.name == 'approver' %}data-approver-container{% endif %}>
+      {% if field.field.widget.input_type == 'checkbox' %}<div class="form-check mt-4">{{ field }}<label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label></div>
+      {% else %}<label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} *{% endif %}</label>{{ field }}{% endif %}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}{% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    </div>
+  {% endfor %}</div></div><div class="d-flex justify-content-end gap-2 mt-3"><a class="btn btn-outline-secondary" href="{% if voucher %}{% url 'voucher_detail' voucher.pk %}{% else %}{% url 'voucher_list' %}{% endif %}">Cancel</a><button class="btn btn-primary">{% if voucher %}Save draft{% else %}Create voucher{% endif %}</button></div></form>
+{% if branches_enabled and not has_branch_choices %}<div class="alert alert-warning mt-3">You need an active branch assignment before creating vouchers. Ask an administrator to assign your branch.</div>{% endif %}
+{% load static %}<script src="{% static 'js/voucher-form.js' %}" defer></script>
+{% endblock %}

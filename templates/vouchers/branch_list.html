@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Branch management{% endblock %}
+{% block content %}
+<header class="management-heading mb-4">
+  <div><a class="text-decoration-none" href="{% url 'company_settings' %}">← Company settings</a><p class="eyebrow mt-3 mb-1">ORGANIZATION</p><h1 class="h2 mb-1">Branch management</h1><p class="text-muted mb-0">Inactive branches remain attached to historical vouchers and reports.</p></div>
+  <a class="btn btn-primary" href="{% url 'branch_create' %}">+ Add branch</a>
+</header>
+{% if branches_enabled %}<div class="alert alert-success">Branch features are enabled. Voucher visibility and approver choices follow branch assignments.</div>{% else %}<div class="alert alert-secondary">Branch features are disabled. The application uses organization-wide voucher access.</div>{% endif %}
+<section class="card management-card"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+  <thead><tr><th>Branch</th><th>Code</th><th>Address</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for branch in branches %}<tr><td><strong>{{ branch.name }}</strong></td><td><code>{{ branch.code }}</code></td><td>{{ branch.address|default:"—"|linebreaksbr }}</td><td>{% if branch.is_active %}<span class="badge text-bg-success">Active</span>{% else %}<span class="badge text-bg-secondary">Inactive</span>{% endif %}</td><td class="text-end"><a class="btn btn-sm btn-outline-secondary" href="{% url 'branch_update' branch.pk %}">Edit</a><form method="post" action="{% url 'branch_toggle' branch.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm {% if branch.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}">{% if branch.is_active %}Deactivate{% else %}Activate{% endif %}</button></form></td></tr>
+  {% empty %}<tr><td colspan="5" class="text-center text-muted py-5">No branches exist. Add branches before enabling branch features.</td></tr>{% endfor %}
+  </tbody></table></div></section>
+{% endblock %}

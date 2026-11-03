@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block content %}
+<header class="reports-heading mb-4">
+  <div>
+    <p class="eyebrow mb-2">FINANCE OVERVIEW</p>
+    <h1 class="h2 mb-1">Reports &amp; budgets</h1>
+    <p class="text-muted mb-0">Track completed payments, branch activity, and monthly category limits.</p>
+  </div>
+  <span class="report-period"><span class="report-period-label">REPORTING PERIOD</span><strong>{{ report_month }}</strong></span>
+</header>
+
+<section class="row g-3 mb-4" aria-label="Monthly summary">
+  <div class="col-sm-6 col-xl-4">
+    <article class="report-stat report-stat-primary h-100">
+      <span class="report-stat-label">Authorized this month</span>
+      <strong class="report-stat-value">{{ company_settings.currency_symbol }} {{ month_total|floatformat:2 }}</strong>
+      <span class="report-stat-note">Payments completed in {{ report_month }}</span>
+    </article>
+  </div>
+  <div class="col-sm-6 col-xl-4">
+    <article class="report-stat h-100">
+      <span class="report-stat-label">Vouchers authorized</span>
+      <strong class="report-stat-value">{{ month_count }}</strong>
+      <span class="report-stat-note">Included in this month's report</span>
+    </article>
+  </div>
+  <div class="col-sm-12 col-xl-4">
+    <article class="report-stat h-100">
+      <span class="report-stat-label">Categories with budgets</span>
+      <strong class="report-stat-value">{{ budgeted_category_count }}</strong>
+      <span class="report-stat-note">Active monthly spending limits</span>
+    </article>
+  </div>
+</section>
+
+{% if branches_enabled %}
+<section class="card report-panel mb-4">
+  <div class="card-header report-panel-heading"><div><p class="eyebrow mb-1">BRANCH PERFORMANCE</p><h2 class="h5 mb-0">Completed spend by branch</h2></div><span class="report-panel-count">{{ branch_report|length }} branches</span></div>
+  <div class="table-responsive"><table class="table report-table align-middle mb-0"><thead><tr><th>Branch</th><th class="text-center">Vouchers</th><th class="text-end">Completed amount</th></tr></thead><tbody>
+    {% for row in branch_report %}<tr><td><strong>{{ row.branch__name|default:"Unassigned" }}</strong>{% if row.branch__code %}<div class="small text-muted">{{ row.branch__code }}</div>{% endif %}</td><td class="text-center"><span class="voucher-count">{{ row.count }}</span></td><td class="text-end report-amount">{{ company_settings.currency_symbol }} {{ row.total|floatformat:2 }}</td></tr>
+    {% empty %}<tr><td colspan="3" class="text-center text-muted py-4">No completed vouchers for this period.</td></tr>{% endfor %}
+  </tbody></table></div>
+</section>
+{% endif %}
+
+<section class="row g-4">
+  <div class="col-xl-7">
+    <article class="card report-panel h-100">
+      <div class="card-header report-panel-heading">
+        <div>
+          <p class="eyebrow mb-1">MONTHLY BREAKDOWN</p>
+          <h2 class="h5 mb-0">Spend by category</h2>
+        </div>
+        <span class="report-panel-count">{{ category_report|length }} categories</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table report-table align-middle mb-0">
+          <thead>
+            <tr><th>Expense category</th><th class="text-center">Vouchers</th><th class="text-end">Authorized amount</th></tr>
+          </thead>
+          <tbody>
+            {% for row in category_report %}
+            <tr>
+              <td><span class="category-mark" aria-hidden="true"></span><strong>{{ row.category__name }}</strong></td>
+              <td class="text-center"><span class="voucher-count">{{ row.count }}</span></td>
+              <td class="text-end report-amount">{{ company_settings.currency_symbol }} {{ row.total|floatformat:2 }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="3"><div class="report-empty"><span class="report-empty-icon" aria-hidden="true">{{ company_settings.currency_symbol }}</span><strong>No authorized spending yet</strong><span>Completed vouchers will appear here for {{ report_month }}.</span></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if category_report %}
+      <div class="report-table-footer"><span>Total authorized</span><strong>{{ company_settings.currency_symbol }} {{ month_total|floatformat:2 }}</strong></div>
+      {% endif %}
+    </article>
+  </div>
+
+  <div class="col-xl-5">
+    <article class="card report-panel h-100">
+      <div class="card-header report-panel-heading">
+        <div>
+          <p class="eyebrow mb-1">BUDGET MONITOR</p>
+          <h2 class="h5 mb-0">Monthly category budgets</h2>
+        </div>
+        <span class="budget-legend"><span aria-hidden="true"></span> Used</span>
+      </div>
+      <div class="card-body budget-list">
+        {% for row in budget_rows %}
+        <section class="budget-item">
+          <div class="budget-item-heading">
+            <div><h3 class="budget-category">{{ row.category.name }}</h3><span class="budget-used">{{ company_settings.currency_symbol }} {{ row.spent|floatformat:2 }} spent</span></div>
+            {% if row.category.monthly_budget_limit %}
+              <span class="budget-remaining {% if row.percentage >= 90 %}budget-remaining-warning{% endif %}">{% if row.percentage >= 100 %}Limit reached{% else %}{{ company_settings.currency_symbol }} {{ row.remaining|floatformat:2 }} left{% endif %}</span>
+            {% else %}
+              <span class="budget-unlimited">No limit</span>
+            {% endif %}
+          </div>
+          {% if row.category.monthly_budget_limit %}
+          <progress class="budget-progress {% if row.percentage >= 90 %}budget-progress-warning{% endif %}" value="{{ row.percentage|floatformat:1 }}" max="100" aria-label="{{ row.category.name }} budget used: {{ row.percentage|floatformat:1 }} percent">{{ row.percentage|floatformat:1 }}%</progress>
+          <div class="budget-scale"><span>0%</span><span>{{ row.percentage|floatformat:1 }}% of {{ company_settings.currency_symbol }} {{ row.category.monthly_budget_limit|floatformat:2 }}</span></div>
+          {% else %}
+          <p class="budget-no-limit mb-0">Authorized spend: {{ company_settings.currency_symbol }} {{ row.spent|floatformat:2 }}</p>
+          {% endif %}
+        </section>
+        {% empty %}
+        <div class="report-empty"><span class="report-empty-icon" aria-hidden="true">◎</span><strong>No active categories</strong><span>Add an expense category in Admin to start tracking budgets.</span></div>
+        {% endfor %}
+      </div>
+    </article>
+  </div>
+</section>
+{% endblock %}
