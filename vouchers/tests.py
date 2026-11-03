@@ -8,6 +8,7 @@ import zlib
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group, Permission
+from django.core.cache import cache
 from django.core import mail
 from django.core.management import call_command
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -16,7 +17,7 @@ from django.urls import reverse
 from django.utils import timezone
 from PIL import Image as PillowImage
 
-from .forms import CompanySettingsForm, GroupManagementForm
+from .forms import CompanySettingsForm, GroupManagementForm, RecurringVoucherForm
 from .models import (
     AuditLog,
     Branch,
@@ -545,6 +546,37 @@ class VoucherApprovalWebTests(TestCase):
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class RecurringVoucherTests(TestCase):
+    def test_due_schedule_is_generated_automatically_during_application_request(self):
+        preparer = User.objects.create_user(
+            "automatic-preparer", "automatic@example.com", "automatic-password"
+        )
+        preparer.groups.add(Group.objects.get(name="Voucher Preparers"))
+        category = ExpenseCategory.objects.create(name="Automatic recurring")
+        schedule = RecurringVoucher.objects.create(
+            title="Automatic rent",
+            category=category,
+            amount=Decimal("500.00"),
+            frequency=RecurringVoucher.Frequency.MONTHLY,
+            next_run=timezone.localdate(),
+            method_of_payment=Voucher.PaymentMethod.BANK_TRANSFER,
+            to="Landlord",
+            being="Automatic rent",
+            payee="Landlord",
+            prepared_by=preparer,
+        )
+        cache.clear()
+        self.client.force_login(preparer)
+
+        response = self.client.get(reverse("recurring_list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(schedule.generated_vouchers.count(), 1)
+        schedule.refresh_from_db()
+        self.assertEqual(
+            schedule.next_run,
+            advance_date(timezone.localdate(), RecurringVoucher.Frequency.MONTHLY),
+        )
+
     def test_calendar_month_advance_clamps_to_last_day(self):
         self.assertEqual(advance_date(date(2026, 1, 31), "monthly"), date(2026, 2, 28))
         self.assertEqual(advance_date(date(2026, 11, 2), "weekly"), date(2026, 11, 9))
@@ -572,6 +604,72 @@ class RecurringVoucherTests(TestCase):
         self.assertEqual(schedule.generated_vouchers.count(), 1)
         schedule.refresh_from_db()
         self.assertEqual(schedule.next_run, advance_date(due_date, "monthly"))
+
+    def test_creator_with_approval_permission_can_save_self_approved_schedule(self):
+        creator = User.objects.create_user(
+            "recurring-approver", "recurring@example.com", "recurring-password"
+        )
+        creator.groups.add(
+            Group.objects.get(name="Voucher Preparers"),
+            Group.objects.get(name="Voucher Approvers"),
+        )
+        category = ExpenseCategory.objects.create(name="Self approved recurring")
+        form = RecurringVoucherForm(
+            data={
+                "title": "Monthly supplies",
+                "category": category.pk,
+                "amount": "125.00",
+                "frequency": RecurringVoucher.Frequency.MONTHLY,
+                "next_run": "2026-11-03",
+                "method_of_payment": Voucher.PaymentMethod.BANK_TRANSFER,
+                "to": "Supplier",
+                "being": "Monthly supplies",
+                "payee": "Supplier",
+                "requires_approval": "on",
+                "approver": creator.pk,
+                "is_active": "on",
+            },
+            user=creator,
+        )
+        self.assertTrue(form.is_valid(), form.errors)
+        schedule = form.save(commit=False)
+        schedule.prepared_by = creator
+        schedule.save()
+        self.assertEqual(schedule.approver, creator)
+
+        call_command("generate_recurring")
+        voucher = schedule.generated_vouchers.get()
+        transition_voucher(voucher.pk, creator, "submit")
+        transition_voucher(voucher.pk, creator, "approve")
+        voucher.refresh_from_db()
+        self.assertEqual(voucher.status, Voucher.Status.APPROVED)
+        self.assertEqual(voucher.approved_by, creator)
+
+    def test_creator_without_approval_permission_cannot_select_self_as_approver(self):
+        creator = User.objects.create_user(
+            "recurring-preparer-only", "preparer@example.com", "preparer-password"
+        )
+        creator.groups.add(Group.objects.get(name="Voucher Preparers"))
+        category = ExpenseCategory.objects.create(name="Restricted recurring")
+        form = RecurringVoucherForm(
+            data={
+                "title": "Restricted schedule",
+                "category": category.pk,
+                "amount": "125.00",
+                "frequency": RecurringVoucher.Frequency.MONTHLY,
+                "next_run": "2026-11-03",
+                "method_of_payment": Voucher.PaymentMethod.BANK_TRANSFER,
+                "to": "Supplier",
+                "being": "Restricted schedule",
+                "payee": "Supplier",
+                "requires_approval": "on",
+                "approver": creator.pk,
+                "is_active": "on",
+            },
+            user=creator,
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn("approver", form.errors)
 
 
 @override_settings(PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
